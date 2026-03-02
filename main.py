@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import engine, SessionLocal
 import models, schemas, crud
+from forecast import generate_forecast
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -80,3 +81,17 @@ def get_daily_sales(product_id: int, db: Session = Depends(get_db)):
         }
         for r in results
     ]
+
+@app.get("/forecast/{product_id}")
+def forecast_product(product_id: int, db: Session = Depends(get_db)):
+    daily_data = crud.get_daily_sales_by_product(db, product_id)
+
+    formatted_data = [
+        {
+            "sale_date": r.sale_date,
+            "total_quantity": r.total_quantity
+        }
+        for r in daily_data
+    ]
+
+    return generate_forecast(formatted_data, steps=7)
